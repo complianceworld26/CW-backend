@@ -13,11 +13,24 @@ if (!process.env.JWT_SECRET) {
 
 const app = express()
 const PORT = Number(process.env.PORT || 5000)
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
+
+/** Comma-separated list, e.g. http://localhost:5173,https://complianceworld.in,https://www.complianceworld.in */
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
 
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true)
+      }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, origin)
+      }
+      return callback(null, false)
+    },
     credentials: true,
   }),
 )
