@@ -108,7 +108,10 @@ router.post('/firebase-login', async (req, res) => {
     decoded = await firebaseAuth.verifyIdToken(idToken)
   } catch (err) {
     console.error('[firebase-login] verifyIdToken failed:', err?.code || err?.message || err)
-    return res.status(401).json({ code: 'auth/invalid-credential', message: 'Invalid Firebase token.' })
+    return res.status(401).json({
+      code: 'auth/invalid-google-token',
+      message: 'Invalid or unverifiable Google sign-in token.',
+    })
   }
 
   const email = String(decoded.email ?? '')
