@@ -106,7 +106,8 @@ router.post('/firebase-login', async (req, res) => {
   try {
     const firebaseAuth = getFirebaseAdminAuth()
     decoded = await firebaseAuth.verifyIdToken(idToken)
-  } catch {
+  } catch (err) {
+    console.error('[firebase-login] verifyIdToken failed:', err?.code || err?.message || err)
     return res.status(401).json({ code: 'auth/invalid-credential', message: 'Invalid Firebase token.' })
   }
 
