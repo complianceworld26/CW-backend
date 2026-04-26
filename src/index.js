@@ -15,12 +15,15 @@ const app = express()
 const PORT = Number(process.env.PORT || 5000)
 
 /**
- * Comma-separated list, e.g. http://localhost:5173,https://complianceworld.in
- * Trailing slashes are stripped. For simple https hostnames (e.g. x.y TLD), both apex and www are allowed.
+ * Comma-separated frontend origins (scheme + host + port). No trailing slashes.
+ * Set CLIENT_URL and/or ALLOWED_ORIGINS on Render, e.g. https://complianceworld.in
+ * (apex + www are auto-expanded for simple https hostnames like example.in).
  */
 function parseClientOrigins() {
-  const raw = process.env.CLIENT_URL || 'http://localhost:5173'
-  const base = raw
+  const raw = [process.env.CLIENT_URL, process.env.ALLOWED_ORIGINS].filter(Boolean).join(',')
+  const fallback = 'http://localhost:5173'
+  const source = raw.trim() ? raw : fallback
+  const base = source
     .split(',')
     .map((s) => s.trim().replace(/\/$/, ''))
     .filter(Boolean)
@@ -44,6 +47,15 @@ function parseClientOrigins() {
 
 const allowedOrigins = parseClientOrigins()
 console.info('[cors] allowed origins:', allowedOrigins.join(', '))
+if (
+  process.env.NODE_ENV === 'production' &&
+  allowedOrigins.length === 1 &&
+  allowedOrigins[0].includes('localhost')
+) {
+  console.warn(
+    '[cors] Production is only allowing localhost. Set CLIENT_URL (or ALLOWED_ORIGINS) on Render to your real site, e.g. https://complianceworld.in — then redeploy.',
+  )
+}
 
 app.use(
   cors({
@@ -54,6 +66,7 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         return callback(null, origin)
       }
+      console.warn('[cors] blocked Origin:', origin, '| allow-list:', allowedOrigins.join(', '))
       return callback(null, false)
     },
     credentials: true,
