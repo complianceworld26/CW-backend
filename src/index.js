@@ -14,11 +14,36 @@ if (!process.env.JWT_SECRET) {
 const app = express()
 const PORT = Number(process.env.PORT || 5000)
 
-/** Comma-separated list, e.g. http://localhost:5173,https://complianceworld.in,https://www.complianceworld.in */
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean)
+/**
+ * Comma-separated list, e.g. http://localhost:5173,https://complianceworld.in
+ * Trailing slashes are stripped. For simple https hostnames (e.g. x.y TLD), both apex and www are allowed.
+ */
+function parseClientOrigins() {
+  const raw = process.env.CLIENT_URL || 'http://localhost:5173'
+  const base = raw
+    .split(',')
+    .map((s) => s.trim().replace(/\/$/, ''))
+    .filter(Boolean)
+
+  const expanded = new Set(base)
+  for (const u of base) {
+    try {
+      const { protocol, hostname } = new URL(u)
+      if (protocol !== 'https:' || hostname === 'localhost') continue
+      if (hostname.startsWith('www.')) {
+        expanded.add(`${protocol}//${hostname.slice(4)}`)
+      } else if (hostname.split('.').length === 2) {
+        expanded.add(`${protocol}//www.${hostname}`)
+      }
+    } catch {
+      /* ignore invalid URL */
+    }
+  }
+  return [...expanded]
+}
+
+const allowedOrigins = parseClientOrigins()
+console.info('[cors] allowed origins:', allowedOrigins.join(', '))
 
 app.use(
   cors({
