@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { Router } from 'express'
 import { pool } from '../db.js'
-import { requireAuth } from '../middleware/auth.js'
+import { optionalAuth } from '../middleware/auth.js'
 import { clearAuthCookie, setAuthCookie, signToken } from '../utils/auth.js'
 import { getFirebaseAdminAuth, isFirebaseAdminConfigured } from '../utils/firebaseAdmin.js'
 
@@ -160,7 +160,7 @@ router.post('/logout', (_req, res) => {
   return res.json({ ok: true })
 })
 
-router.get('/me', requireAuth, (req, res) => {
+router.get('/me', optionalAuth, (req, res) => {
   return res.json({ user: req.user })
 })
 
