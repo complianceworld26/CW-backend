@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import express from 'express'
 import { ensureSchema } from './db.js'
 import authRoutes from './routes/auth.routes.js'
+import contactRoutes from './routes/contact.routes.js'
 
 dotenv.config()
 
@@ -80,6 +81,7 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/auth', authRoutes)
+app.use('/api/contact', contactRoutes)
 
 app.use((err, _req, res, _next) => {
   console.error(err)
