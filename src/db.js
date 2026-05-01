@@ -22,7 +22,6 @@ export async function ensureSchema() {
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT,
       auth_provider TEXT NOT NULL DEFAULT 'local',
-      firebase_uid TEXT UNIQUE,
       avatar_url TEXT,
       email_verified BOOLEAN NOT NULL DEFAULT FALSE,
       last_login_at TIMESTAMPTZ,
@@ -35,7 +34,6 @@ export async function ensureSchema() {
     ALTER COLUMN password_hash DROP NOT NULL;
   `)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT NOT NULL DEFAULT 'local';`)
-  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid TEXT UNIQUE;`)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;`)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;`)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;`)

@@ -3,7 +3,6 @@ import { Router } from 'express'
 import { pool } from '../db.js'
 import { optionalAuth } from '../middleware/auth.js'
 import { clearAuthCookie, setAuthCookie, signToken } from '../utils/auth.js'
-import { getFirebaseAdminAuth, isFirebaseAdminConfigured } from '../utils/firebaseAdmin.js'
 
 const router = Router()
 
@@ -67,8 +66,8 @@ router.post('/login', async (req, res) => {
   }
   if (!user.password_hash) {
     return res.status(401).json({
-      code: 'auth/use-google-login',
-      message: 'This account uses Google sign-in. Continue with Google.',
+      code: 'auth/no-password-set',
+      message: 'This account has no password. Contact support to enable email sign-in.',
     })
   }
 
@@ -85,75 +84,6 @@ router.post('/login', async (req, res) => {
       id: String(user.id),
       name: user.name,
       email: user.email,
-      createdAt: user.created_at,
-    },
-  })
-})
-
-router.post('/firebase-login', async (req, res) => {
-  if (!isFirebaseAdminConfigured()) {
-    return res
-      .status(500)
-      .json({ code: 'auth/firebase-admin-not-configured', message: 'Firebase login is not configured.' })
-  }
-
-  const idToken = String(req.body?.idToken ?? '')
-  if (!idToken) {
-    return res.status(400).json({ code: 'auth/invalid-input', message: 'Firebase token is required.' })
-  }
-
-  let decoded
-  try {
-    const firebaseAuth = getFirebaseAdminAuth()
-    decoded = await firebaseAuth.verifyIdToken(idToken)
-  } catch (err) {
-    console.error('[firebase-login] verifyIdToken failed:', err?.code || err?.message || err)
-    return res.status(401).json({
-      code: 'auth/invalid-google-token',
-      message: 'Invalid or unverifiable Google sign-in token.',
-    })
-  }
-
-  const email = String(decoded.email ?? '')
-    .trim()
-    .toLowerCase()
-  const name = String(decoded.name ?? '').trim() || email.split('@')[0] || 'User'
-  const firebaseUid = String(decoded.uid)
-  const avatarUrl = decoded.picture ? String(decoded.picture) : null
-  const emailVerified = Boolean(decoded.email_verified)
-
-  if (!email) {
-    return res.status(400).json({ code: 'auth/invalid-email', message: 'Firebase account email is missing.' })
-  }
-
-  const upsert = await pool.query(
-    `INSERT INTO users (name, email, password_hash, auth_provider, firebase_uid, avatar_url, email_verified, last_login_at)
-     VALUES ($1, $2, NULL, 'google', $3, $4, $5, NOW())
-     ON CONFLICT (email)
-     DO UPDATE SET
-       name = EXCLUDED.name,
-       auth_provider = 'google',
-       firebase_uid = EXCLUDED.firebase_uid,
-       avatar_url = EXCLUDED.avatar_url,
-       email_verified = EXCLUDED.email_verified,
-       last_login_at = NOW()
-     RETURNING id, name, email, auth_provider, firebase_uid, avatar_url, email_verified, created_at`,
-    [name, email, firebaseUid, avatarUrl, emailVerified],
-  )
-  const user = upsert.rows[0]
-
-  const token = signToken(user.id)
-  setAuthCookie(res, token)
-
-  return res.json({
-    user: {
-      id: String(user.id),
-      name: user.name,
-      email: user.email,
-      authProvider: user.auth_provider,
-      firebaseUid: user.firebase_uid,
-      avatarUrl: user.avatar_url,
-      emailVerified: user.email_verified,
       createdAt: user.created_at,
     },
   })
